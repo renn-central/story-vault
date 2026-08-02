@@ -327,7 +327,7 @@
         .book-cover-container {
             position: relative;
             width: 100%;
-            aspect-ratio: 2.5 / 3.5;
+            aspect-ratio: 2 / 3.3;
             background: var(--forest-brown);
             overflow: hidden;
             border-radius: 3px 10px 10px 3px;
@@ -336,7 +336,7 @@
         .book-cover-container img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: fill;
         }
 
         .book-cover-placeholder {
@@ -448,21 +448,23 @@
         }
 
         .modal-cover {
-            width: 100%;
-            height: 300px;
+            width: 200px;
+            aspect-ratio: 2.5 / 3.5;
+            margin: 0 auto 1.5rem;
             background: var(--forest-brown);
             border-radius: 4px;
-            margin-bottom: 1.5rem;
             overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
         }
 
         .modal-cover img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
+        }
+
+        .modal-info {
+            text-align: center;
         }
 
         .modal-info h2 {
@@ -482,6 +484,19 @@
             color: var(--accent-rust);
             margin-bottom: 1rem;
             font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+        }
+
+        .modal-rating .stars {
+            letter-spacing: 2px;
+            font-size: 1.1rem;
+        }
+
+        .modal-rating .stars .star-empty {
+            color: var(--border-dark);
         }
 
         .modal-synopsis {
@@ -489,6 +504,15 @@
             margin-bottom: 1.5rem;
             line-height: 1.8;
             font-size: 0.95rem;
+            text-align: left;
+        }
+
+        .modal-synopsis p {
+            margin-bottom: 1rem;
+        }
+
+        .modal-synopsis p:last-child {
+            margin-bottom: 0;
         }
 
         .modal-actions {
@@ -1086,6 +1110,28 @@
             }
         }
 
+        // Detects a "(Series Name, #N)" suffix on a title, e.g.
+        // "Keys to the Demon Prison (Fablehaven, #5)" -> series "Fablehaven", number 5.
+        function getSeriesInfo(title) {
+            const match = title.match(/^(.*?)\s*\(([^,]+),\s*#(\d+(?:\.\d+)?)\)\s*$/);
+            if (match) {
+                return { baseTitle: match[1].trim(), series: match[2].trim(), number: parseFloat(match[3]) };
+            }
+            return { baseTitle: title.trim(), series: null, number: null };
+        }
+
+        function sortBySeries(books) {
+            return [...books].sort((a, b) => {
+                const infoA = getSeriesInfo(a.title);
+                const infoB = getSeriesInfo(b.title);
+                const groupA = (infoA.series || infoA.baseTitle).toLowerCase();
+                const groupB = (infoB.series || infoB.baseTitle).toLowerCase();
+
+                if (groupA !== groupB) return groupA.localeCompare(groupB);
+                return (infoA.number ?? 0) - (infoB.number ?? 0);
+            });
+        }
+
         function filterAndRenderBooks() {
             const searchTerm = searchInput.value.toLowerCase();
             const activeFilter = document.querySelector('.filter-btn.active').dataset.filter;
@@ -1096,6 +1142,8 @@
                 const matchesFilter = activeFilter === 'all' || book.category === activeFilter;
                 return matchesSearch && matchesFilter;
             });
+
+            filteredBooks = sortBySeries(filteredBooks);
 
             renderBooks();
         }
@@ -1143,12 +1191,38 @@
             });
         }
 
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        function getStarsHTML(rating) {
+            if (!rating) return '';
+            const filled = Math.round(rating);
+            let stars = '';
+            for (let i = 1; i <= 5; i++) {
+                stars += i <= filled ? '★' : '<span class="star-empty">★</span>';
+            }
+            return `<span class="stars">${stars}</span> ${rating.toFixed(2)}`;
+        }
+
+        function formatSynopsisHTML(text) {
+            const escaped = escapeHtml(text || '');
+            return escaped
+                .split(/\n\s*\n/)
+                .filter(p => p.trim())
+                .map(p => `<p>${p.trim().replace(/\n/g, '<br>')}</p>`)
+                .join('');
+        }
+
         async function openBookModal(book) {
             selectedBook = book;
             document.getElementById('modalTitle').textContent = book.title;
             document.getElementById('modalAuthor').textContent = `by ${book.author}`;
-            document.getElementById('modalRating').textContent = book.rating ? `⭐ ${book.rating.toFixed(2)}` : '';
-            document.getElementById('modalSynopsis').textContent = book.synopsis;
+            document.getElementById('modalRating').innerHTML = getStarsHTML(book.rating);
+            document.getElementById('modalSynopsis').innerHTML = formatSynopsisHTML(book.synopsis);
 
             const modalCover = document.getElementById('modalCover');
             modalCover.innerHTML = '<div class="book-cover-placeholder">Loading…</div>';
@@ -1244,8 +1318,8 @@
                 selectedBook = { ...selectedBook, ...updates };
                 document.getElementById('modalTitle').textContent = title;
                 document.getElementById('modalAuthor').textContent = `by ${author}`;
-                document.getElementById('modalRating').textContent = rating ? `⭐ ${rating.toFixed(2)}` : '';
-                document.getElementById('modalSynopsis').textContent = synopsis;
+                document.getElementById('modalRating').innerHTML = getStarsHTML(rating);
+                document.getElementById('modalSynopsis').innerHTML = formatSynopsisHTML(synopsis);
 
                 editDetailsForm.classList.add('hidden');
                 editingActionsButtons.classList.remove('hidden');
