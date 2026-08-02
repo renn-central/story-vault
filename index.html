@@ -287,20 +287,41 @@
         .book-card {
             background: var(--forest-green);
             border: 1px solid var(--border-dark);
-            border-radius: 8px;
-            overflow: hidden;
+            border-radius: 3px 10px 10px 3px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
             position: relative;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+        }
+
+        .book-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 12%;
+            background: linear-gradient(to right, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0));
+            border-radius: 3px 0 0 3px;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .book-card::after {
+            content: '';
+            position: absolute;
+            top: 4px;
+            right: -5px;
+            bottom: 4px;
+            width: 5px;
+            background: repeating-linear-gradient(to bottom, #ede4cf 0px, #ede4cf 2px, #cfc3a3 2px, #cfc3a3 3px);
+            border-radius: 0 4px 4px 0;
+            z-index: -1;
         }
 
         .book-card:hover {
             transform: translateY(-4px);
-            border-color: var(--accent-rust);
-            box-shadow: 0 8px 24px rgba(184, 92, 56, 0.3);
+            box-shadow: 0 10px 24px rgba(184, 92, 56, 0.35);
         }
 
         .book-cover-container {
@@ -309,6 +330,7 @@
             aspect-ratio: 2.5 / 3.5;
             background: var(--forest-brown);
             overflow: hidden;
+            border-radius: 3px 10px 10px 3px;
         }
 
         .book-cover-container img {
@@ -325,36 +347,9 @@
             align-items: center;
             justify-content: center;
             color: var(--text-secondary);
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             text-align: center;
             padding: 1rem;
-        }
-
-        .book-card-content {
-            padding: 1rem;
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .book-title {
-            font-family: 'Crimson Text', serif;
-            font-size: 1.2rem;
-            color: var(--cream);
-            margin-bottom: 0.3rem;
-            font-weight: 600;
-        }
-
-        .book-author {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .book-rating {
-            color: var(--accent-rust);
-            font-size: 0.85rem;
-            margin-bottom: 0.8rem;
         }
 
         .book-card-actions {
@@ -363,6 +358,7 @@
             right: 0.5rem;
             display: flex;
             gap: 0.5rem;
+            z-index: 3;
         }
 
         .action-btn {
@@ -644,15 +640,10 @@
             <div class="filter-group">
                 <button class="filter-btn active" data-filter="all">All Books</button>
                 <button class="filter-btn" data-filter="WLW">WLW</button>
+                <button class="filter-btn" data-filter="Not WLW">Not WLW</button>
+                <button class="filter-btn hidden" id="toggleCsvBtn">Upload CSV</button>
+                <button class="filter-btn hidden" id="toggleAddBookBtn">+ Add New Book</button>
             </div>
-        </div>
-    </div>
-
-    <!-- Editing Toolbar (only visible in Editing Mode) -->
-    <div id="editingToolbar" class="search-filter-bar hidden" style="padding-top: 0;">
-        <div class="search-filter-content" style="flex-direction: row;">
-            <button class="filter-btn" id="toggleCsvBtn">Upload CSV</button>
-            <button class="filter-btn" id="toggleAddBookBtn">+ Add New Book</button>
         </div>
     </div>
 
@@ -697,7 +688,7 @@
                     <label>Category</label>
                     <select id="bookCategory">
                         <option value="WLW">WLW</option>
-                        <option value="WLM">WLM</option>
+                        <option value="Not WLW">Not WLW</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -741,12 +732,46 @@
                     <button class="btn btn-secondary" id="modalCloseBtn">Close</button>
                 </div>
                 <div id="editingActionsModal" class="hidden" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-dark);">
-                    <div class="form-group">
-                        <label>Update Cover Image</label>
-                        <input type="file" id="updateCoverFile" accept="image/*">
+                    <div id="editingActionsButtons">
+                        <button class="btn btn-secondary" id="editDetailsBtn" style="width: 100%; margin-bottom: 0.5rem;">Edit Details</button>
+                        <div class="form-group">
+                            <label>Update Cover Image</label>
+                            <input type="file" id="updateCoverFile" accept="image/*">
+                        </div>
+                        <button class="btn btn-secondary" id="updateCoverBtn" style="width: 100%; margin-bottom: 0.5rem;">Update Cover</button>
+                        <button class="btn btn-danger" id="deleteBookBtn" style="width: 100%;">Delete Book</button>
                     </div>
-                    <button class="btn btn-secondary" id="updateCoverBtn" style="width: 100%; margin-bottom: 0.5rem;">Update Cover</button>
-                    <button class="btn btn-danger" id="deleteBookBtn" style="width: 100%;">Delete Book</button>
+                    <div id="editDetailsForm" class="hidden">
+                        <div class="form-group">
+                            <label>Title</label>
+                            <input type="text" id="editTitle" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Author</label>
+                            <input type="text" id="editAuthor" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Synopsis</label>
+                            <textarea id="editSynopsis" required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Goodreads Rating</label>
+                            <input type="number" id="editRating" step="0.01" min="0" max="5">
+                        </div>
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select id="editCategory">
+                                <option value="WLW">WLW</option>
+                                <option value="Not WLW">Not WLW</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Google Drive Link</label>
+                            <input type="url" id="editDriveLink" placeholder="https://drive.google.com/file/d/...">
+                        </div>
+                        <button class="btn btn-primary" id="saveDetailsBtn" style="width: 100%; margin-bottom: 0.5rem;">Save Changes</button>
+                        <button class="btn btn-secondary" id="cancelEditDetailsBtn" style="width: 100%;">Cancel</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -835,7 +860,6 @@
 
         const browsingModeBtn = document.getElementById('browsingModeBtn');
         const editingModeBtn = document.getElementById('editingModeBtn');
-        const editingToolbar = document.getElementById('editingToolbar');
         const csvPanel = document.getElementById('csvPanel');
         const addBookPanel = document.getElementById('addBookPanel');
         const toggleCsvBtn = document.getElementById('toggleCsvBtn');
@@ -854,6 +878,11 @@
         const updateCoverBtn = document.getElementById('updateCoverBtn');
         const updateCoverFile = document.getElementById('updateCoverFile');
         const editingActionsModal = document.getElementById('editingActionsModal');
+        const editDetailsBtn = document.getElementById('editDetailsBtn');
+        const editingActionsButtons = document.getElementById('editingActionsButtons');
+        const editDetailsForm = document.getElementById('editDetailsForm');
+        const saveDetailsBtn = document.getElementById('saveDetailsBtn');
+        const cancelEditDetailsBtn = document.getElementById('cancelEditDetailsBtn');
 
         browsingModeBtn.addEventListener('click', () => switchMode('browsing'));
         editingModeBtn.addEventListener('click', () => switchMode('editing'));
@@ -863,13 +892,15 @@
             if (mode === 'browsing') {
                 browsingModeBtn.classList.add('active');
                 editingModeBtn.classList.remove('active');
-                editingToolbar.classList.add('hidden');
+                toggleCsvBtn.classList.add('hidden');
+                toggleAddBookBtn.classList.add('hidden');
                 csvPanel.classList.add('hidden');
                 addBookPanel.classList.add('hidden');
             } else {
                 browsingModeBtn.classList.remove('active');
                 editingModeBtn.classList.add('active');
-                editingToolbar.classList.remove('hidden');
+                toggleCsvBtn.classList.remove('hidden');
+                toggleAddBookBtn.classList.remove('hidden');
             }
             renderBooks();
         }
@@ -1093,14 +1124,10 @@
                     `;
                 }
 
+                bookCard.title = `${book.title} — by ${book.author}`;
                 bookCard.innerHTML = `
                     <div class="book-cover-container" data-book-id="${book.id}" data-alt="${book.title}">
                         <div class="book-cover-placeholder">Loading…</div>
-                    </div>
-                    <div class="book-card-content">
-                        <div class="book-title">${book.title}</div>
-                        <div class="book-author">by ${book.author}</div>
-                        ${book.rating ? `<div class="book-rating">⭐ ${book.rating.toFixed(2)}</div>` : ''}
                     </div>
                     ${actionsHTML}
                 `;
@@ -1145,6 +1172,8 @@
             bookModal.classList.remove('active');
             selectedBook = null;
             updateCoverFile.value = '';
+            editDetailsForm.classList.add('hidden');
+            editingActionsButtons.classList.remove('hidden');
         }
 
         modalClose.addEventListener('click', closeModal);
@@ -1172,6 +1201,62 @@
             const match = driveLink.match(/\/d\/([a-zA-Z0-9-_]+)/);
             return match ? match[1] : null;
         }
+
+        editDetailsBtn.addEventListener('click', () => {
+            if (!selectedBook) return;
+            document.getElementById('editTitle').value = selectedBook.title || '';
+            document.getElementById('editAuthor').value = selectedBook.author || '';
+            document.getElementById('editSynopsis').value = selectedBook.synopsis || '';
+            document.getElementById('editRating').value = selectedBook.rating ?? '';
+            document.getElementById('editCategory').value = selectedBook.category || 'WLW';
+            document.getElementById('editDriveLink').value = selectedBook.driveLink || '';
+
+            editingActionsButtons.classList.add('hidden');
+            editDetailsForm.classList.remove('hidden');
+        });
+
+        cancelEditDetailsBtn.addEventListener('click', () => {
+            editDetailsForm.classList.add('hidden');
+            editingActionsButtons.classList.remove('hidden');
+        });
+
+        saveDetailsBtn.addEventListener('click', async () => {
+            if (!selectedBook) return;
+
+            const title = document.getElementById('editTitle').value.trim();
+            const author = document.getElementById('editAuthor').value.trim();
+            const synopsis = document.getElementById('editSynopsis').value.trim();
+            const ratingRaw = document.getElementById('editRating').value;
+            const rating = ratingRaw === '' ? null : parseFloat(ratingRaw);
+            const category = document.getElementById('editCategory').value;
+            const driveLink = document.getElementById('editDriveLink').value.trim();
+
+            if (!title || !author || !synopsis) {
+                showToast('Title, author, and synopsis are required', 'error');
+                return;
+            }
+
+            try {
+                saveDetailsBtn.disabled = true;
+                const updates = { title, author, synopsis, rating, category, driveLink };
+                await db.collection('books').doc(selectedBook.id).update(updates);
+
+                selectedBook = { ...selectedBook, ...updates };
+                document.getElementById('modalTitle').textContent = title;
+                document.getElementById('modalAuthor').textContent = `by ${author}`;
+                document.getElementById('modalRating').textContent = rating ? `⭐ ${rating.toFixed(2)}` : '';
+                document.getElementById('modalSynopsis').textContent = synopsis;
+
+                editDetailsForm.classList.add('hidden');
+                editingActionsButtons.classList.remove('hidden');
+                showToast('Book details updated!', 'success');
+                loadBooks();
+            } catch (error) {
+                showToast(`Error updating book: ${error.message}`, 'error');
+            } finally {
+                saveDetailsBtn.disabled = false;
+            }
+        });
 
         updateCoverBtn.addEventListener('click', async () => {
             if (!selectedBook) return;
