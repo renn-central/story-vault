@@ -83,31 +83,35 @@
         }
 
         .mode-toggle {
-            background: var(--accent-rust);
+            background: var(--forest-dark);
             color: white;
-            border: none;
+            border: 1px solid var(--border-dark);
             padding: 0.7rem 1.2rem;
             border-radius: 4px;
             cursor: pointer;
             font-family: 'Lora', serif;
             font-size: 0.9rem;
-            font-weight: 600;
+            font-weight: 700;
             transition: all 0.3s ease;
         }
 
         .mode-toggle:hover {
-            background: #d06f45;
+            border-color: var(--accent-rust);
             transform: translateY(-2px);
         }
 
         .mode-toggle.active {
-            background: #8b4513;
+            color: #4CAF50;
+            border-color: #4CAF50;
         }
 
         .search-filter-bar {
             background: var(--forest-green);
             padding: 1.5rem 1rem;
             border-bottom: 1px solid var(--border-dark);
+            position: sticky;
+            top: var(--header-height, 88px);
+            z-index: 90;
         }
 
         .search-filter-content {
@@ -621,6 +625,17 @@
             .header-controls {
                 width: 100%;
                 justify-content: space-between;
+                max-height: 60px;
+                overflow: hidden;
+                margin-top: 0.75rem;
+                transition: max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
+            }
+
+            .header-controls.controls-hidden {
+                max-height: 0;
+                opacity: 0;
+                margin-top: 0;
+                pointer-events: none;
             }
 
             .header h1 {
@@ -801,6 +816,30 @@
         </div>
     </div>
 
+    <!-- Editing Mode Login -->
+    <div id="editLoginModal" class="modal">
+        <div class="modal-content" style="max-width: 380px;">
+            <div class="modal-header">
+                <h2 style="font-family: 'Crimson Text', serif; margin: 0; font-size: 1.4rem;">🔒 Editing Mode Login</h2>
+                <button class="modal-close" id="editLoginClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editLoginForm">
+                    <div class="form-group">
+                        <label>Username</label>
+                        <input type="text" id="editLoginUsername" autocomplete="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="editLoginPassword" autocomplete="current-password" required>
+                    </div>
+                    <div id="editLoginError" style="color: #ff6b6b; font-size: 0.85rem; margin-bottom: 0.8rem; display: none;"></div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Unlock Editing Mode</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
 
@@ -908,8 +947,55 @@
         const saveDetailsBtn = document.getElementById('saveDetailsBtn');
         const cancelEditDetailsBtn = document.getElementById('cancelEditDetailsBtn');
 
+        const editLoginModal = document.getElementById('editLoginModal');
+        const editLoginForm = document.getElementById('editLoginForm');
+        const editLoginUsername = document.getElementById('editLoginUsername');
+        const editLoginPassword = document.getElementById('editLoginPassword');
+        const editLoginError = document.getElementById('editLoginError');
+        const editLoginClose = document.getElementById('editLoginClose');
+
+        // NOTE: this is a simple deterrent, not real security — anyone who views
+        // this file's source can see these credentials. Good for keeping a
+        // casual visitor from accidentally editing/deleting books, not for
+        // protecting sensitive data.
+        const EDIT_USERNAME = 'Renn_03';
+        const EDIT_PASSWORD = 'Turtl3!';
+        let editingUnlocked = false;
+
         browsingModeBtn.addEventListener('click', () => switchMode('browsing'));
-        editingModeBtn.addEventListener('click', () => switchMode('editing'));
+        editingModeBtn.addEventListener('click', () => {
+            if (editingUnlocked) {
+                switchMode('editing');
+            } else {
+                editLoginError.style.display = 'none';
+                editLoginForm.reset();
+                editLoginModal.classList.add('active');
+                editLoginUsername.focus();
+            }
+        });
+
+        function closeEditLoginModal() {
+            editLoginModal.classList.remove('active');
+        }
+
+        editLoginClose.addEventListener('click', closeEditLoginModal);
+        editLoginModal.addEventListener('click', (e) => {
+            if (e.target === editLoginModal) closeEditLoginModal();
+        });
+
+        editLoginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (editLoginUsername.value === EDIT_USERNAME && editLoginPassword.value === EDIT_PASSWORD) {
+                editingUnlocked = true;
+                closeEditLoginModal();
+                switchMode('editing');
+            } else {
+                editLoginError.textContent = 'Incorrect username or password.';
+                editLoginError.style.display = 'block';
+                editLoginPassword.value = '';
+                editLoginPassword.focus();
+            }
+        });
 
         function switchMode(mode) {
             currentMode = mode;
@@ -1409,6 +1495,35 @@
                 toast.remove();
             }, 3000);
         }
+
+        // Keeps the search bar sticking directly below the header, whatever
+        // the header's current height is (it changes when the mode buttons
+        // collapse/expand on mobile).
+        const headerEl = document.querySelector('.header');
+        const headerControlsEl = document.querySelector('.header-controls');
+
+        const headerResizeObserver = new ResizeObserver(() => {
+            document.documentElement.style.setProperty('--header-height', `${headerEl.offsetHeight}px`);
+        });
+        headerResizeObserver.observe(headerEl);
+
+        // On mobile, hide the Browsing/Editing buttons while scrolling down
+        // (search bar stays pinned), and bring them back on scroll up, so
+        // there's more room to actually see the books.
+        let lastScrollY = window.scrollY;
+        window.addEventListener('scroll', () => {
+            const scrollY = window.scrollY;
+            if (window.innerWidth <= 768) {
+                if (scrollY > lastScrollY && scrollY > 80) {
+                    headerControlsEl.classList.add('controls-hidden');
+                } else if (scrollY < lastScrollY) {
+                    headerControlsEl.classList.remove('controls-hidden');
+                }
+            } else {
+                headerControlsEl.classList.remove('controls-hidden');
+            }
+            lastScrollY = scrollY;
+        }, { passive: true });
 
         loadBooks();
     </script>
