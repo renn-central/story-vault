@@ -30,6 +30,7 @@
             color: var(--text-primary);
             line-height: 1.6;
             overflow-x: hidden;
+            padding-top: var(--wrapper-height, 168px);
         }
 
         body::before {
@@ -46,13 +47,23 @@
             z-index: -1;
         }
 
+        .sticky-top-wrapper {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            transition: transform 0.3s ease;
+        }
+
+        .sticky-top-wrapper.header-hidden {
+            transform: translateY(calc(-1 * var(--header-only-height, 88px)));
+        }
+
         .header {
             background: linear-gradient(135deg, var(--forest-green) 0%, var(--forest-brown) 100%);
             border-bottom: 2px solid var(--accent-rust);
             padding: 1.5rem 1rem;
-            position: sticky;
-            top: 0;
-            z-index: 100;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
         }
 
@@ -109,9 +120,6 @@
             background: var(--forest-green);
             padding: 1.5rem 1rem;
             border-bottom: 1px solid var(--border-dark);
-            position: sticky;
-            top: var(--header-height, 88px);
-            z-index: 90;
         }
 
         .search-filter-content {
@@ -625,17 +633,6 @@
             .header-controls {
                 width: 100%;
                 justify-content: space-between;
-                max-height: 60px;
-                overflow: hidden;
-                margin-top: 0.75rem;
-                transition: max-height 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
-            }
-
-            .header-controls.controls-hidden {
-                max-height: 0;
-                opacity: 0;
-                margin-top: 0;
-                pointer-events: none;
             }
 
             .header h1 {
@@ -661,27 +658,29 @@
     </style>
 </head>
 <body>
-    <header class="header">
-        <div class="header-content">
-            <h1>📚 Story Vault</h1>
-            <div class="header-controls">
-                <button class="mode-toggle active" id="browsingModeBtn">Browsing Mode</button>
-                <button class="mode-toggle" id="editingModeBtn">Editing Mode</button>
+    <div class="sticky-top-wrapper" id="stickyTopWrapper">
+        <header class="header">
+            <div class="header-content">
+                <h1>📚 Story Vault</h1>
+                <div class="header-controls">
+                    <button class="mode-toggle active" id="browsingModeBtn">Browsing Mode</button>
+                    <button class="mode-toggle" id="editingModeBtn">Editing Mode</button>
+                </div>
             </div>
-        </div>
-    </header>
+        </header>
 
-    <div class="search-filter-bar">
-        <div class="search-filter-content">
-            <div class="search-box">
-                <input type="text" id="searchInput" placeholder="Search by title or author...">
-            </div>
-            <div class="filter-group">
-                <button class="filter-btn active" data-filter="all">All Books</button>
-                <button class="filter-btn" data-filter="WLW">WLW</button>
-                <button class="filter-btn" data-filter="Not WLW">Not WLW</button>
-                <button class="filter-btn hidden" id="toggleCsvBtn">Upload CSV</button>
-                <button class="filter-btn hidden" id="toggleAddBookBtn">+ Add New Book</button>
+        <div class="search-filter-bar">
+            <div class="search-filter-content">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search by title or author...">
+                </div>
+                <div class="filter-group">
+                    <button class="filter-btn active" data-filter="all">All Books</button>
+                    <button class="filter-btn" data-filter="WLW">WLW</button>
+                    <button class="filter-btn" data-filter="Not WLW">Not WLW</button>
+                    <button class="filter-btn hidden" id="toggleCsvBtn">Upload CSV</button>
+                    <button class="filter-btn hidden" id="toggleAddBookBtn">+ Add New Book</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1496,31 +1495,35 @@
             }, 3000);
         }
 
-        // Keeps the search bar sticking directly below the header, whatever
-        // the header's current height is (it changes when the mode buttons
-        // collapse/expand on mobile).
+        // Measures the wrapper's (untransformed) height and the header's own
+        // height, and exposes them as CSS variables. These only change on
+        // real resizes (window resize, orientation change) — never as a
+        // side effect of the scroll-triggered hide/show below, since that
+        // only applies a CSS transform, which doesn't affect layout size.
+        const stickyTopWrapper = document.getElementById('stickyTopWrapper');
         const headerEl = document.querySelector('.header');
-        const headerControlsEl = document.querySelector('.header-controls');
 
-        const headerResizeObserver = new ResizeObserver(() => {
-            document.documentElement.style.setProperty('--header-height', `${headerEl.offsetHeight}px`);
+        const stickyResizeObserver = new ResizeObserver(() => {
+            document.documentElement.style.setProperty('--wrapper-height', `${stickyTopWrapper.offsetHeight}px`);
+            document.documentElement.style.setProperty('--header-only-height', `${headerEl.offsetHeight}px`);
         });
-        headerResizeObserver.observe(headerEl);
+        stickyResizeObserver.observe(stickyTopWrapper);
 
-        // On mobile, hide the Browsing/Editing buttons while scrolling down
-        // (search bar stays pinned), and bring them back on scroll up, so
-        // there's more room to actually see the books.
+        // On mobile, slide the header (title + mode buttons) up out of view
+        // while scrolling down, revealing more room for books, while the
+        // search bar stays visible right at the top. Scrolling up brings
+        // the header back.
         let lastScrollY = window.scrollY;
         window.addEventListener('scroll', () => {
             const scrollY = window.scrollY;
             if (window.innerWidth <= 768) {
                 if (scrollY > lastScrollY && scrollY > 80) {
-                    headerControlsEl.classList.add('controls-hidden');
+                    stickyTopWrapper.classList.add('header-hidden');
                 } else if (scrollY < lastScrollY) {
-                    headerControlsEl.classList.remove('controls-hidden');
+                    stickyTopWrapper.classList.remove('header-hidden');
                 }
             } else {
-                headerControlsEl.classList.remove('controls-hidden');
+                stickyTopWrapper.classList.remove('header-hidden');
             }
             lastScrollY = scrollY;
         }, { passive: true });
