@@ -30,7 +30,6 @@
             color: var(--text-primary);
             line-height: 1.6;
             overflow-x: hidden;
-            padding-top: var(--wrapper-height, 168px);
         }
 
         body::before {
@@ -47,23 +46,13 @@
             z-index: -1;
         }
 
-        .sticky-top-wrapper {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 100;
-            transition: transform 0.3s ease;
-        }
-
-        .sticky-top-wrapper.header-hidden {
-            transform: translateY(calc(-1 * var(--header-only-height, 88px)));
-        }
-
         .header {
             background: linear-gradient(135deg, var(--forest-green) 0%, var(--forest-brown) 100%);
             border-bottom: 2px solid var(--accent-rust);
             padding: 1.5rem 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
         }
 
@@ -93,33 +82,72 @@
             flex-wrap: wrap;
         }
 
-        .mode-toggle {
-            background: var(--forest-dark);
-            color: white;
-            border: 1px solid var(--border-dark);
-            padding: 0.7rem 1.2rem;
+        .header-menu {
+            position: relative;
+        }
+
+        .menu-btn {
+            width: 44px;
+            height: 44px;
             border-radius: 4px;
+            background: var(--forest-dark);
+            border: 1px solid var(--border-dark);
+            color: white;
+            font-size: 1.3rem;
             cursor: pointer;
-            font-family: 'Lora', serif;
-            font-size: 0.9rem;
-            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             transition: all 0.3s ease;
         }
 
-        .mode-toggle:hover {
+        .menu-btn:hover {
             border-color: var(--accent-rust);
-            transform: translateY(-2px);
         }
 
-        .mode-toggle.active {
+        .menu-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            min-width: 190px;
+            background: var(--forest-dark);
+            border: 1px solid var(--border-dark);
+            border-radius: 6px;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            z-index: 150;
+        }
+
+        .menu-option {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 0.85rem 1.1rem;
+            background: none;
+            border: none;
+            color: white;
+            font-family: 'Lora', serif;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .menu-option:hover {
+            background: var(--forest-brown);
+        }
+
+        .menu-option.active {
             color: #4CAF50;
-            border-color: #4CAF50;
         }
 
         .search-filter-bar {
             background: var(--forest-green);
             padding: 1.5rem 1rem;
             border-bottom: 1px solid var(--border-dark);
+            position: sticky;
+            top: var(--header-height, 76px);
+            z-index: 90;
         }
 
         .search-filter-content {
@@ -625,16 +653,6 @@
         }
 
         @media (max-width: 768px) {
-            .header-content {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .header-controls {
-                width: 100%;
-                justify-content: space-between;
-            }
-
             .header h1 {
                 font-size: 1.4rem;
             }
@@ -658,29 +676,30 @@
     </style>
 </head>
 <body>
-    <div class="sticky-top-wrapper" id="stickyTopWrapper">
-        <header class="header">
-            <div class="header-content">
-                <h1>📚 Story Vault</h1>
-                <div class="header-controls">
-                    <button class="mode-toggle active" id="browsingModeBtn">Browsing Mode</button>
-                    <button class="mode-toggle" id="editingModeBtn">Editing Mode</button>
+    <header class="header">
+        <div class="header-content">
+            <h1>📚 Story Vault</h1>
+            <div class="header-menu">
+                <button class="menu-btn" id="menuBtn" aria-label="Menu">☰</button>
+                <div class="menu-dropdown hidden" id="menuDropdown">
+                    <button class="menu-option active" id="browsingModeBtn">📖 Browsing Mode</button>
+                    <button class="menu-option" id="editingModeBtn">✎ Editing Mode</button>
                 </div>
             </div>
-        </header>
+        </div>
+    </header>
 
-        <div class="search-filter-bar">
-            <div class="search-filter-content">
-                <div class="search-box">
-                    <input type="text" id="searchInput" placeholder="Search by title or author...">
-                </div>
-                <div class="filter-group">
-                    <button class="filter-btn active" data-filter="all">All Books</button>
-                    <button class="filter-btn" data-filter="WLW">WLW</button>
-                    <button class="filter-btn" data-filter="Not WLW">Not WLW</button>
-                    <button class="filter-btn hidden" id="toggleCsvBtn">Upload CSV</button>
-                    <button class="filter-btn hidden" id="toggleAddBookBtn">+ Add New Book</button>
-                </div>
+    <div class="search-filter-bar">
+        <div class="search-filter-content">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search by title or author...">
+            </div>
+            <div class="filter-group">
+                <button class="filter-btn active" data-filter="all">All Books</button>
+                <button class="filter-btn" data-filter="WLW">WLW</button>
+                <button class="filter-btn" data-filter="Not WLW">Not WLW</button>
+                <button class="filter-btn hidden" id="toggleCsvBtn">Upload CSV</button>
+                <button class="filter-btn hidden" id="toggleAddBookBtn">+ Add New Book</button>
             </div>
         </div>
     </div>
@@ -920,6 +939,8 @@
         let filteredBooks = [];
         let selectedBook = null;
 
+        const menuBtn = document.getElementById('menuBtn');
+        const menuDropdown = document.getElementById('menuDropdown');
         const browsingModeBtn = document.getElementById('browsingModeBtn');
         const editingModeBtn = document.getElementById('editingModeBtn');
         const csvPanel = document.getElementById('csvPanel');
@@ -961,8 +982,23 @@
         const EDIT_PASSWORD = 'Turtl3!';
         let editingUnlocked = false;
 
-        browsingModeBtn.addEventListener('click', () => switchMode('browsing'));
+        menuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            menuDropdown.classList.toggle('hidden');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!menuDropdown.classList.contains('hidden') && !e.target.closest('.header-menu')) {
+                menuDropdown.classList.add('hidden');
+            }
+        });
+
+        browsingModeBtn.addEventListener('click', () => {
+            switchMode('browsing');
+            menuDropdown.classList.add('hidden');
+        });
         editingModeBtn.addEventListener('click', () => {
+            menuDropdown.classList.add('hidden');
             if (editingUnlocked) {
                 switchMode('editing');
             } else {
@@ -1495,38 +1531,14 @@
             }, 3000);
         }
 
-        // Measures the wrapper's (untransformed) height and the header's own
-        // height, and exposes them as CSS variables. These only change on
-        // real resizes (window resize, orientation change) — never as a
-        // side effect of the scroll-triggered hide/show below, since that
-        // only applies a CSS transform, which doesn't affect layout size.
-        const stickyTopWrapper = document.getElementById('stickyTopWrapper');
+        // Keeps the search bar sticking directly below the header. The header
+        // is now a constant height (no more collapsing/hiding), so this only
+        // ever needs to update on genuine window resizes.
         const headerEl = document.querySelector('.header');
-
-        const stickyResizeObserver = new ResizeObserver(() => {
-            document.documentElement.style.setProperty('--wrapper-height', `${stickyTopWrapper.offsetHeight}px`);
-            document.documentElement.style.setProperty('--header-only-height', `${headerEl.offsetHeight}px`);
+        const headerResizeObserver = new ResizeObserver(() => {
+            document.documentElement.style.setProperty('--header-height', `${headerEl.offsetHeight}px`);
         });
-        stickyResizeObserver.observe(stickyTopWrapper);
-
-        // On mobile, slide the header (title + mode buttons) up out of view
-        // while scrolling down, revealing more room for books, while the
-        // search bar stays visible right at the top. Scrolling up brings
-        // the header back.
-        let lastScrollY = window.scrollY;
-        window.addEventListener('scroll', () => {
-            const scrollY = window.scrollY;
-            if (window.innerWidth <= 768) {
-                if (scrollY > lastScrollY && scrollY > 80) {
-                    stickyTopWrapper.classList.add('header-hidden');
-                } else if (scrollY < lastScrollY) {
-                    stickyTopWrapper.classList.remove('header-hidden');
-                }
-            } else {
-                stickyTopWrapper.classList.remove('header-hidden');
-            }
-            lastScrollY = scrollY;
-        }, { passive: true });
+        headerResizeObserver.observe(headerEl);
 
         loadBooks();
     </script>
