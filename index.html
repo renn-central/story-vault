@@ -213,6 +213,51 @@
             border-color: var(--accent-rust);
         }
 
+        .filter-count {
+            display: inline-block;
+            margin-left: 0.4rem;
+            padding: 0.05rem 0.5rem;
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 10px;
+            font-size: 0.78rem;
+        }
+
+        .filter-btn.active .filter-count {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .genre-checkbox-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            max-height: 220px;
+            overflow-y: auto;
+            padding-right: 0.3rem;
+        }
+
+        .genre-checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: var(--forest-dark);
+            border: 1px solid var(--border-dark);
+            border-radius: 4px;
+            padding: 0.4rem 0.7rem;
+            font-size: 0.82rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .genre-checkbox-item input {
+            accent-color: var(--accent-rust);
+            cursor: pointer;
+        }
+
+        .genre-checkbox-item.checked {
+            border-color: var(--accent-rust);
+            color: var(--cream);
+        }
+
         .main-content {
             max-width: 1400px;
             margin: 0 auto;
@@ -390,6 +435,57 @@
             font-size: 0.85rem;
             text-align: center;
             padding: 1rem;
+        }
+
+        .genre-tag {
+            background: rgba(245, 241, 232, 0.15);
+            border: 1px solid rgba(245, 241, 232, 0.35);
+            color: var(--cream);
+            font-size: 0.68rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+            line-height: 1.4;
+        }
+
+        .genre-tag-more {
+            background: var(--accent-rust);
+            border: 1px solid var(--accent-rust);
+            color: white;
+            font-size: 0.68rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+            cursor: pointer;
+            line-height: 1.4;
+        }
+
+        .genre-tag-more:hover {
+            background: #a04e2f;
+        }
+
+        .modal-genres {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            justify-content: center;
+            margin-bottom: 1.2rem;
+        }
+
+        .modal-genres .genre-tag {
+            background: rgba(184, 92, 56, 0.15);
+            border: 1px solid var(--accent-rust);
+            color: var(--cream-muted);
+            font-size: 0.78rem;
+            padding: 0.25rem 0.7rem;
+        }
+
+        .rating-source {
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        .genre-input-wrap {
+            position: relative;
         }
 
         .book-card-actions {
@@ -695,11 +791,12 @@
                 <input type="text" id="searchInput" placeholder="Search by title or author...">
             </div>
             <div class="filter-group">
-                <button class="filter-btn active" data-filter="all">All Books</button>
-                <button class="filter-btn" data-filter="WLW">WLW</button>
-                <button class="filter-btn" data-filter="Not WLW">Not WLW</button>
+                <button class="filter-btn active" data-filter="all">All Books <span class="filter-count" id="countAll">0</span></button>
+                <button class="filter-btn" data-filter="WLW">WLW <span class="filter-count" id="countWLW">0</span></button>
+                <button class="filter-btn" data-filter="Not WLW">Not WLW <span class="filter-count" id="countNotWLW">0</span></button>
                 <button class="filter-btn hidden" id="toggleCsvBtn">Upload CSV</button>
                 <button class="filter-btn hidden" id="toggleAddBookBtn">+ Add New Book</button>
+                <button class="filter-btn hidden" id="exportExcelBtn">⬇ Export to Excel</button>
             </div>
         </div>
     </div>
@@ -715,7 +812,8 @@
                 <input type="file" id="csvFile" accept=".csv">
             </div>
             <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 1rem;">
-                CSV format: title,author,synopsis,rating,category,driveLink
+                CSV format: title,author,synopsis,rating,category,driveLink,genres<br>
+                (genres column is optional — choose from Fantasy, Science Fiction, Romance, Mystery, Historical Fiction, Contemporary Fiction, Horror; separate more than one with a semicolon, e.g. "Fantasy; Romance")
             </p>
         </div>
     </div>
@@ -740,6 +838,10 @@
                 <div class="form-group">
                     <label>Goodreads Rating</label>
                     <input type="number" id="bookRating" step="0.01" min="0" max="5">
+                </div>
+                <div class="form-group genre-input-wrap">
+                    <label>Genre <span style="font-weight:400; color: var(--text-secondary);">(select one or more)</span></label>
+                    <div class="genre-checkbox-list" id="bookGenreCheckboxes"></div>
                 </div>
                 <div class="form-group">
                     <label>Category</label>
@@ -782,6 +884,7 @@
                 <div class="modal-info">
                     <div class="modal-author" id="modalAuthor"></div>
                     <div class="modal-rating" id="modalRating"></div>
+                    <div class="modal-genres" id="modalGenres"></div>
                     <div class="modal-synopsis" id="modalSynopsis"></div>
                 </div>
                 <div class="modal-actions">
@@ -814,6 +917,10 @@
                         <div class="form-group">
                             <label>Goodreads Rating</label>
                             <input type="number" id="editRating" step="0.01" min="0" max="5">
+                        </div>
+                        <div class="form-group genre-input-wrap">
+                            <label>Genre <span style="font-weight:400; color: var(--text-secondary);">(select one or more)</span></label>
+                            <div class="genre-checkbox-list" id="editGenreCheckboxes"></div>
                         </div>
                         <div class="form-group">
                             <label>Category</label>
@@ -860,6 +967,7 @@
 
     <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.5.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <script>
         const firebaseConfig = {
@@ -904,20 +1012,93 @@
         }
 
         // In-memory cache of book covers fetched from the separate 'covers'
-        // collection, keyed by book id, so we never re-fetch the same cover twice.
+        // collection, keyed by book id, so we never re-fetch the same cover twice
+        // within a single page load.
         const coverCache = {};
+
+        // Persistent cache (survives page reloads/new sessions) backed by
+        // IndexedDB, so covers you've already loaded once don't have to be
+        // re-downloaded from Firestore every time you open the vault.
+        const COVER_DB_NAME = 'storyVaultCoverCache';
+        const COVER_STORE_NAME = 'covers';
+        let coverDbPromise = null;
+
+        function openCoverDb() {
+            if (coverDbPromise) return coverDbPromise;
+            coverDbPromise = new Promise((resolve, reject) => {
+                const request = indexedDB.open(COVER_DB_NAME, 1);
+                request.onupgradeneeded = () => {
+                    request.result.createObjectStore(COVER_STORE_NAME);
+                };
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+            return coverDbPromise;
+        }
+
+        async function getCachedCover(bookId) {
+            try {
+                const idb = await openCoverDb();
+                return await new Promise((resolve, reject) => {
+                    const tx = idb.transaction(COVER_STORE_NAME, 'readonly');
+                    const req = tx.objectStore(COVER_STORE_NAME).get(bookId);
+                    req.onsuccess = () => resolve(req.result !== undefined ? req.result : null);
+                    req.onerror = () => reject(req.error);
+                });
+            } catch (e) {
+                return null; // IndexedDB unavailable — fall back to network
+            }
+        }
+
+        async function setCachedCover(bookId, dataUrl) {
+            try {
+                const idb = await openCoverDb();
+                await new Promise((resolve, reject) => {
+                    const tx = idb.transaction(COVER_STORE_NAME, 'readwrite');
+                    tx.objectStore(COVER_STORE_NAME).put(dataUrl, bookId);
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = () => reject(tx.error);
+                });
+            } catch (e) {
+                // best-effort cache; ignore failures
+            }
+        }
+
+        async function deleteCachedCover(bookId) {
+            try {
+                const idb = await openCoverDb();
+                await new Promise((resolve, reject) => {
+                    const tx = idb.transaction(COVER_STORE_NAME, 'readwrite');
+                    tx.objectStore(COVER_STORE_NAME).delete(bookId);
+                    tx.oncomplete = () => resolve();
+                    tx.onerror = () => reject(tx.error);
+                });
+            } catch (e) {
+                // ignore
+            }
+        }
 
         async function getCoverDataUrl(bookId) {
             if (coverCache[bookId] !== undefined) return coverCache[bookId];
+
+            const cached = await getCachedCover(bookId);
+            if (cached !== null) {
+                coverCache[bookId] = cached;
+                return cached;
+            }
+
             const snap = await db.collection('covers').doc(bookId).get();
             const dataUrl = snap.exists ? snap.data().dataUrl : null;
             coverCache[bookId] = dataUrl;
+            if (dataUrl) setCachedCover(bookId, dataUrl); // persist for next visit
             return dataUrl;
         }
 
         // Watches book cover containers and only fetches+renders the actual
-        // image once a card scrolls near the viewport, so 200 books don't
-        // all try to load their covers at once.
+        // image once a card scrolls near the viewport, so 200+ books don't
+        // all try to load their covers at once. rootMargin is generous so
+        // covers a little further down/up start loading before you reach
+        // them, making scrolling feel seamless.
         const coverObserver = new IntersectionObserver((entries) => {
             entries.forEach(async (entry) => {
                 if (!entry.isIntersecting) return;
@@ -932,7 +1113,7 @@
                     container.innerHTML = `<div class="book-cover-placeholder">No cover image</div>`;
                 }
             });
-        }, { rootMargin: '300px' });
+        }, { rootMargin: '800px' });
 
         let currentMode = 'browsing';
         let allBooks = [];
@@ -947,6 +1128,7 @@
         const addBookPanel = document.getElementById('addBookPanel');
         const toggleCsvBtn = document.getElementById('toggleCsvBtn');
         const toggleAddBookBtn = document.getElementById('toggleAddBookBtn');
+        const exportExcelBtn = document.getElementById('exportExcelBtn');
         const searchInput = document.getElementById('searchInput');
         const filterBtns = document.querySelectorAll('.filter-btn[data-filter]');
         const booksContainer = document.getElementById('booksContainer');
@@ -1039,6 +1221,7 @@
                 editingModeBtn.classList.remove('active');
                 toggleCsvBtn.classList.add('hidden');
                 toggleAddBookBtn.classList.add('hidden');
+                exportExcelBtn.classList.add('hidden');
                 csvPanel.classList.add('hidden');
                 addBookPanel.classList.add('hidden');
             } else {
@@ -1046,6 +1229,7 @@
                 editingModeBtn.classList.add('active');
                 toggleCsvBtn.classList.remove('hidden');
                 toggleAddBookBtn.classList.remove('hidden');
+                exportExcelBtn.classList.remove('hidden');
             }
             renderBooks();
         }
@@ -1060,6 +1244,41 @@
             csvPanel.classList.add('hidden');
         });
 
+        // Exports the whole library (not just what's currently filtered) to
+        // a downloadable .xlsx file, in reading order (series grouped
+        // together), so it doubles as a portable backup of your data.
+        exportExcelBtn.addEventListener('click', () => {
+            try {
+                const rows = sortBySeries(allBooks).map(book => ({
+                    'Book Title': book.title || '',
+                    'Author': book.author || '',
+                    'Rating': book.rating ?? '',
+                    'Genre': (book.genres || []).join(', '),
+                    'Synopsis': book.synopsis || '',
+                    'Book Link': book.driveLink || ''
+                }));
+
+                const worksheet = XLSX.utils.json_to_sheet(rows);
+                worksheet['!cols'] = [
+                    { wch: 32 }, // Book Title
+                    { wch: 22 }, // Author
+                    { wch: 8 },  // Rating
+                    { wch: 26 }, // Genre
+                    { wch: 60 }, // Synopsis
+                    { wch: 40 }  // Book Link
+                ];
+
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, 'Story Vault');
+
+                const dateStr = new Date().toISOString().slice(0, 10);
+                XLSX.writeFile(workbook, `story-vault-export-${dateStr}.xlsx`);
+                showToast('Excel file downloaded!', 'success');
+            } catch (error) {
+                showToast(`Error exporting to Excel: ${error.message}`, 'error');
+            }
+        });
+
         searchInput.addEventListener('input', debounce(() => {
             filterAndRenderBooks();
         }, 300));
@@ -1069,8 +1288,18 @@
                 filterBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 filterAndRenderBooks();
+                // Always land at the top of the new collection, rather than
+                // wherever you happened to be scrolled to in the last one.
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             });
         });
+
+        // Updates the book counts shown next to each collection tab.
+        function updateFilterCounts() {
+            document.getElementById('countAll').textContent = allBooks.length;
+            document.getElementById('countWLW').textContent = allBooks.filter(b => b.category === 'WLW').length;
+            document.getElementById('countNotWLW').textContent = allBooks.filter(b => b.category === 'Not WLW').length;
+        }
 
         function debounce(func, delay) {
             let timeoutId;
@@ -1143,7 +1372,7 @@
                     
                     let successCount = 0;
                     for (let i = 1; i < rows.length; i++) {
-                        const [title, author, synopsis, rating, category, driveLink] = rows[i];
+                        const [title, author, synopsis, rating, category, driveLink, genresRaw] = rows[i];
                         
                         if (title && author) {
                             await db.collection('books').add({
@@ -1153,6 +1382,7 @@
                                 rating: parseFloat(rating) || 0,
                                 category: category || 'WLW',
                                 driveLink: driveLink || '',
+                                genres: genresRaw ? genresRaw.split(';').map(g => g.trim()).filter(Boolean) : [],
                                 createdAt: new Date()
                             });
                             successCount++;
@@ -1178,11 +1408,12 @@
             const author = document.getElementById('bookAuthor').value;
             const synopsis = document.getElementById('bookSynopsis').value;
             const rating = parseFloat(document.getElementById('bookRating').value) || 0;
+            const genres = getCheckedGenres('bookGenreCheckboxes');
             const category = document.getElementById('bookCategory').value;
             const driveLink = document.getElementById('bookDriveLink').value;
             const coverFile = document.getElementById('bookCoverFile').files[0];
 
-            console.log('Form values:', { title, author, synopsis, rating, category, driveLink });
+            console.log('Form values:', { title, author, synopsis, rating, category, driveLink, genres });
 
             try {
                 console.log('Writing to Firestore...');
@@ -1191,6 +1422,7 @@
                     author,
                     synopsis,
                     rating,
+                    genres,
                     category,
                     driveLink,
                     createdAt: new Date()
@@ -1205,11 +1437,13 @@
                         updatedAt: new Date()
                     });
                     coverCache[bookRef.id] = dataUrl;
+                    setCachedCover(bookRef.id, dataUrl);
                     console.log('Cover saved');
                 }
 
                 showToast('Book added successfully!', 'success');
                 addBookForm.reset();
+                renderGenreCheckboxes('bookGenreCheckboxes');
                 addBookPanel.classList.add('hidden');
                 loadBooks();
             } catch (error) {
@@ -1225,6 +1459,7 @@
                     id: doc.id,
                     ...doc.data()
                 }));
+                updateFilterCounts();
                 filterAndRenderBooks();
             } catch (error) {
                 showToast(`Error loading books: ${error.message}`, 'error');
@@ -1326,8 +1561,72 @@
             for (let i = 1; i <= 5; i++) {
                 stars += i <= filled ? '★' : '<span class="star-empty">★</span>';
             }
-            return `<span class="stars">${stars}</span> ${rating.toFixed(2)}`;
+            return `<span class="stars">${stars}</span> ${rating.toFixed(2)} <span class="rating-source">(Goodreads)</span>`;
         }
+
+        // ---- Genre helpers ----
+
+        // The fixed set of primary genres used across the library. Kept as
+        // one constant so the Add form, Edit form, and advanced search
+        // panel all stay in sync.
+        const PRIMARY_GENRES = ['Fantasy', 'Science Fiction', 'Romance', 'Mystery', 'Historical Fiction', 'Contemporary Fiction', 'Horror'];
+
+        // Renders the fixed genre list as checkboxes into the given
+        // container, pre-checking whichever genres are passed in.
+        function renderGenreCheckboxes(containerId, selected = []) {
+            const container = document.getElementById(containerId);
+            const selectedLower = new Set(selected.map(g => g.toLowerCase()));
+            container.innerHTML = PRIMARY_GENRES.map(g => {
+                const checked = selectedLower.has(g.toLowerCase());
+                const safeId = containerId + '-' + g.replace(/[^a-zA-Z0-9]/g, '-');
+                return `
+                    <label class="genre-checkbox-item ${checked ? 'checked' : ''}" for="${safeId}">
+                        <input type="checkbox" id="${safeId}" value="${g}" ${checked ? 'checked' : ''}>
+                        ${g}
+                    </label>
+                `;
+            }).join('');
+        }
+
+        function getCheckedGenres(containerId) {
+            return Array.from(document.querySelectorAll(`#${containerId} input:checked`)).map(cb => cb.value);
+        }
+
+        // Keeps the checkbox's highlighted-label styling in sync as the user
+        // checks/unchecks options in a genre checkbox list.
+        function wireGenreCheckboxVisuals(containerId) {
+            document.getElementById(containerId).addEventListener('change', (e) => {
+                if (e.target.tagName !== 'INPUT') return;
+                e.target.closest('.genre-checkbox-item').classList.toggle('checked', e.target.checked);
+            });
+        }
+
+        renderGenreCheckboxes('bookGenreCheckboxes');
+        wireGenreCheckboxVisuals('bookGenreCheckboxes');
+        wireGenreCheckboxVisuals('editGenreCheckboxes');
+
+        function renderModalGenreTags(genres, expanded = false) {
+            if (!genres || genres.length === 0) return '';
+            const shown = expanded ? genres : genres.slice(0, 3);
+            let html = shown.map(g => `<span class="genre-tag">${escapeHtml(g)}</span>`).join('');
+            if (!expanded && genres.length > 3) {
+                html += `<span class="genre-tag-more" data-action="expand-modal-genres">+${genres.length - 3} more</span>`;
+            } else if (expanded && genres.length > 3) {
+                html += `<span class="genre-tag-more" data-action="collapse-modal-genres">Show less</span>`;
+            }
+            return html;
+        }
+
+        // Lets the "+N more" / "Show less" pill in the modal expand and
+        // collapse the full genre list without re-opening the modal.
+        document.getElementById('modalGenres').addEventListener('click', (e) => {
+            if (!selectedBook) return;
+            if (e.target.closest('[data-action="expand-modal-genres"]')) {
+                document.getElementById('modalGenres').innerHTML = renderModalGenreTags(selectedBook.genres, true);
+            } else if (e.target.closest('[data-action="collapse-modal-genres"]')) {
+                document.getElementById('modalGenres').innerHTML = renderModalGenreTags(selectedBook.genres, false);
+            }
+        });
 
         function formatSynopsisHTML(text) {
             const escaped = escapeHtml(text || '');
@@ -1343,6 +1642,7 @@
             document.getElementById('modalTitle').textContent = book.title;
             document.getElementById('modalAuthor').textContent = `by ${book.author}`;
             document.getElementById('modalRating').innerHTML = getStarsHTML(book.rating);
+            document.getElementById('modalGenres').innerHTML = renderModalGenreTags(book.genres);
             document.getElementById('modalSynopsis').innerHTML = formatSynopsisHTML(book.synopsis);
 
             const modalCover = document.getElementById('modalCover');
@@ -1403,6 +1703,7 @@
             document.getElementById('editAuthor').value = selectedBook.author || '';
             document.getElementById('editSynopsis').value = selectedBook.synopsis || '';
             document.getElementById('editRating').value = selectedBook.rating ?? '';
+            renderGenreCheckboxes('editGenreCheckboxes', selectedBook.genres || []);
             document.getElementById('editCategory').value = selectedBook.category || 'WLW';
             document.getElementById('editDriveLink').value = selectedBook.driveLink || '';
 
@@ -1423,6 +1724,7 @@
             const synopsis = document.getElementById('editSynopsis').value.trim();
             const ratingRaw = document.getElementById('editRating').value;
             const rating = ratingRaw === '' ? null : parseFloat(ratingRaw);
+            const genres = getCheckedGenres('editGenreCheckboxes');
             const category = document.getElementById('editCategory').value;
             const driveLink = document.getElementById('editDriveLink').value.trim();
 
@@ -1433,13 +1735,14 @@
 
             try {
                 saveDetailsBtn.disabled = true;
-                const updates = { title, author, synopsis, rating, category, driveLink };
+                const updates = { title, author, synopsis, rating, genres, category, driveLink };
                 await db.collection('books').doc(selectedBook.id).update(updates);
 
                 selectedBook = { ...selectedBook, ...updates };
                 document.getElementById('modalTitle').textContent = title;
                 document.getElementById('modalAuthor').textContent = `by ${author}`;
                 document.getElementById('modalRating').innerHTML = getStarsHTML(rating);
+                document.getElementById('modalGenres').innerHTML = renderModalGenreTags(genres);
                 document.getElementById('modalSynopsis').innerHTML = formatSynopsisHTML(synopsis);
 
                 editDetailsForm.classList.add('hidden');
@@ -1471,6 +1774,7 @@
                     updatedAt: new Date()
                 });
                 coverCache[selectedBook.id] = dataUrl;
+                setCachedCover(selectedBook.id, dataUrl);
 
                 showToast('Cover updated!', 'success');
                 updateCoverFile.value = '';
@@ -1490,6 +1794,7 @@
                     await db.collection('books').doc(selectedBook.id).delete();
                     await db.collection('covers').doc(selectedBook.id).delete().catch(() => {});
                     delete coverCache[selectedBook.id];
+                    deleteCachedCover(selectedBook.id);
                     showToast('Book deleted!', 'success');
                     loadBooks();
                     closeModal();
@@ -1505,6 +1810,7 @@
                     await db.collection('books').doc(bookId).delete();
                     await db.collection('covers').doc(bookId).delete().catch(() => {});
                     delete coverCache[bookId];
+                    deleteCachedCover(bookId);
                     showToast('Book deleted!', 'success');
                     loadBooks();
                 } catch (error) {
